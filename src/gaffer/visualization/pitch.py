@@ -31,23 +31,28 @@ def _add_pitch_shapes(fig: go.Figure) -> None:
     fig.add_shape(
         type="rect", x0=0, x1=1, y0=0, y1=1,
         fillcolor=PITCH_GREEN, line=dict(color=PITCH_LINE, width=2),
+        layer="below",
     )
     fig.add_shape(
         type="line", x0=0, x1=1, y0=0.5, y1=0.5,
         line=dict(color=PITCH_LINE, width=2),
+        layer="below",
     )
     fig.add_shape(
         type="circle", x0=0.42, x1=0.58, y0=0.43, y1=0.57,
         line=dict(color=PITCH_LINE, width=2),
+        layer="below",
     )
     # Penalty boxes (bottom = home side, top = away)
     fig.add_shape(
         type="rect", x0=0.25, x1=0.75, y0=0, y1=0.16,
         line=dict(color=PITCH_LINE, width=2),
+        layer="below",
     )
     fig.add_shape(
         type="rect", x0=0.25, x1=0.75, y0=0.84, y1=1,
         line=dict(color=PITCH_LINE, width=2),
+        layer="below",
     )
 
 

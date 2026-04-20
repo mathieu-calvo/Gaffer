@@ -22,14 +22,14 @@ def render_player_table(
         horizon_total: If True, also show a sum across all gameweeks present in
             `projections` as a `xPts (horizon)` column.
     """
-    if (slice(None), gameweek) not in projections.index:
+    if gameweek in projections.index.get_level_values("gameweek"):
+        gw_proj = projections.xs(gameweek, level="gameweek")
+    else:
         gw_proj = pd.DataFrame(
             index=players.index,
             columns=["expected_points", "lower_80", "upper_80"],
             dtype=float,
         ).fillna(0.0)
-    else:
-        gw_proj = projections.xs(gameweek, level="gameweek")
 
     table = players.join(gw_proj, how="left").rename(
         columns={

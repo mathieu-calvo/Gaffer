@@ -49,3 +49,6 @@ htmlcov/
 .coverage
 .coverage.*
 .pytest_cache/
+
+# screenshots
+Capture.JPG
