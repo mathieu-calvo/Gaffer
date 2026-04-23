@@ -30,11 +30,15 @@ env/
 # Streamlit secrets
 .streamlit/secrets.toml
 
-# Runtime cache (SQLite DB, fetched FPL API responses)
-data/cache/
+# Runtime cache (SQLite DB, fetched FPL API responses).
+# NB: we intentionally ship data/cache/models/*.joblib so Streamlit Cloud
+# cold-starts don't have to retrain. Everything else under data/cache/ is local-only.
+data/cache/*
+!data/cache/models/
+data/cache/models/*
+!data/cache/models/*.joblib
 
-# Trained models (regenerate via notebooks/03)
-*.joblib
+# Trained models elsewhere are still local-only
 *.pkl
 
 # Jupyter

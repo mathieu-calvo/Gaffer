@@ -34,16 +34,15 @@ def load_models_and_projections(horizon: int):
 
 
 @st.cache_data(show_spinner="Solving MILP…")
-def solve_optimal_squad(horizon: int, bench_weight: float):
-    proj, current_gw = load_models_and_projections(horizon)
+def solve_optimal_squad(horizon: int, bench_weight: float, current_gw: int, _proj):
     result = optimize_squad(
-        projections=proj.projections,
-        players=proj.players,
+        projections=_proj.projections,
+        players=_proj.players,
         start_gw=current_gw,
         horizon=horizon,
         bench_weight=bench_weight,
     )
-    return proj, current_gw, result
+    return result
 
 
 st.title("⚽ Gaffer — Optimal Squad")
@@ -65,7 +64,8 @@ with st.sidebar:
         st.rerun()
 
 try:
-    proj, current_gw, result = solve_optimal_squad(horizon, bench_weight)
+    proj, current_gw = load_models_and_projections(horizon)
+    result = solve_optimal_squad(horizon, bench_weight, current_gw, proj)
 except FileNotFoundError as exc:
     st.error(
         f"Historical CSV not found: {exc}. Place "
