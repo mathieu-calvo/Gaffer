@@ -6,6 +6,18 @@ import pandas as pd
 import streamlit as st
 
 
+def build_player_label_map(players: pd.DataFrame) -> dict[str, int]:
+    """Return a mapping of widget-display label → player_id.
+
+    Must match the label format used by :func:`squad_id_picker` so callers can
+    seed `st.session_state` (e.g., after importing a squad by FPL manager id).
+    """
+    return {
+        f"{row['name']} · {row['team']} · £{row['price']:.1f}m": int(pid)
+        for pid, row in players.iterrows()
+    }
+
+
 def squad_id_picker(
     players: pd.DataFrame,
     label: str = "Your current squad (pick 15)",
@@ -17,10 +29,7 @@ def squad_id_picker(
     for disambiguation but returns ids so downstream code can hand them
     directly to the optimiser.
     """
-    label_to_id: dict[str, int] = {
-        f"{row['name']} · {row['team']} · £{row['price']:.1f}m": int(pid)
-        for pid, row in players.iterrows()
-    }
+    label_to_id = build_player_label_map(players)
     chosen_labels = st.multiselect(
         label,
         options=sorted(label_to_id.keys()),

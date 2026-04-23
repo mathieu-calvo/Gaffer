@@ -116,21 +116,25 @@ def build_inference_set(
     engineered = feature_engineer(gwdf)
     last_game = compute_rolling(engineered, alpha=alpha).last_game
 
-    # Upcoming fixtures
+    # Upcoming fixtures. Use the provider's "current GW" (first fully-upcoming GW)
+    # as the lower bound so we never emit rows for a mid-GW already in progress —
+    # those would otherwise surface as 0-xPts ghosts for players who've already
+    # played, and cause an off-by-one tail GW vs. the optimizer's start_gw.
+    current_gw = fpl.get_current_gw()
     fixtures = fpl.get_fixtures()
-    fixtures = fixtures[~fixtures["finished"]]
     fixtures = fixtures.loc[
         :,
         [
             "id", "event", "kickoff_time", "team_h", "team_a",
-            "team_h_difficulty", "team_a_difficulty",
+            "team_h_difficulty", "team_a_difficulty", "finished",
         ],
     ]
     fixtures = reformat_dates(fixtures)
-
-    # Limit horizon
-    min_gw = int(fixtures["event"].min())
-    fixtures = fixtures[fixtures["event"] < min_gw + horizon_gws]
+    fixtures = fixtures[
+        (fixtures["event"] >= current_gw)
+        & (fixtures["event"] < current_gw + horizon_gws)
+        & (~fixtures["finished"])
+    ].drop(columns=["finished"])
 
     # Materialise home + away perspectives.
     home = fixtures.assign(was_home=True)
@@ -223,12 +227,18 @@ def predict_projections(
     )
     grouped.index.set_names(["player_id", "gameweek"], inplace=True)
 
+    bootstrap = fpl.get_bootstrap()
+    team_short_by_name = {
+        bootstrap.id_to_team_name[tid]: short
+        for tid, short in bootstrap.id_to_team_short.items()
+    }
     players = (
         inference.reset_index()
         .drop_duplicates("id")
         .set_index("id")[["name", "team", "position", "price"]]
         .sort_index()
     )
+    players["team_short"] = players["team"].map(team_short_by_name).fillna("")
     players.index.set_names("player_id", inplace=True)
     return Projections(projections=grouped, players=players)
 

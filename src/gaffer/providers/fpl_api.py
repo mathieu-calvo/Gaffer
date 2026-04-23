@@ -93,6 +93,22 @@ class LiveFplApiProvider:
             return int(fixtures["event"].max())
         return int(upcoming["event"].min())
 
+    def get_manager_entry(self, manager_id: int) -> dict[str, Any]:
+        """Fetch public entry info for an FPL manager.
+
+        Useful fields: `last_deadline_bank` (£m × 10), `current_event`, `name`,
+        `player_first_name`, `player_last_name`. Raises if the id is unknown.
+        """
+        return self._get_json(f"entry/{int(manager_id)}/", ttl_hours=1)
+
+    def get_manager_picks(self, manager_id: int, event: int) -> list[int]:
+        """Return the 15 FPL player ids picked by `manager_id` for the given GW."""
+        payload = self._get_json(
+            f"entry/{int(manager_id)}/event/{int(event)}/picks/", ttl_hours=1
+        )
+        picks = payload.get("picks", [])
+        return [int(p["element"]) for p in picks]
+
     def get_player_histories(self) -> pd.DataFrame:
         """Per-player GW history for the current season.
 

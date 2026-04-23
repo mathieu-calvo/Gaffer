@@ -27,11 +27,19 @@ def render_pitch(
             return float(projections.loc[(pid, plan.gameweek), "expected_points"])
         return 0.0
 
+    def _team_short(pid: int) -> str:
+        if "team_short" in players.columns:
+            short = players.loc[pid, "team_short"]
+            if isinstance(short, str) and short:
+                return short
+        return str(players.loc[pid, "team"])[:3].upper()
+
     xi_payload = [
         {
             "id": int(pid),
             "name": str(players.loc[pid, "name"]),
             "team": str(players.loc[pid, "team"]),
+            "team_short": _team_short(pid),
             "position": str(players.loc[pid, "position"]),
             "expected_points": _xp(pid),
         }

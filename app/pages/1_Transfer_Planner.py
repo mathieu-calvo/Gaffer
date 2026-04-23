@@ -10,7 +10,7 @@ from gaffer.providers.historical_csv import HistoricalCsvProvider
 from gaffer.services.model_cache import train_or_load_ensembles
 from gaffer.services.optimization_service import optimize_squad
 from gaffer.services.prediction_service import predict_projections
-from gaffer.ui.components import render_pitch, squad_id_picker
+from gaffer.ui.components import build_player_label_map, render_pitch, squad_id_picker
 
 st.set_page_config(
     page_title="Gaffer · Transfer Planner",
@@ -41,14 +41,60 @@ st.markdown(
 
 with st.sidebar:
     horizon = st.slider("Planning horizon (gameweeks)", 1, 5, settings.horizon)
-    bank = st.number_input("Money in the bank (£m)", min_value=0.0, value=0.0, step=0.1)
-    free_transfers = st.slider("Free transfers this GW", 0, 5, 1)
+    bank = st.number_input(
+        "Money in the bank (£m)", min_value=0.0, step=0.1, key="tp_bank"
+    )
+    free_transfers = st.slider(
+        "Free transfers this GW", 0, 5, key="tp_free_transfers",
+        value=st.session_state.get("tp_free_transfers", 1),
+    )
 
 try:
     proj, current_gw = load_projections(horizon)
 except Exception as exc:  # noqa: BLE001
     st.error(f"Failed to load projections: {exc}")
     st.stop()
+
+with st.expander("Import squad by FPL manager ID", expanded=False):
+    st.caption(
+        "Your manager id is in the URL of your FPL team page "
+        "(e.g. fantasy.premierleague.com/entry/**1234567**/event/12)."
+    )
+    col_id, col_btn = st.columns([3, 1])
+    with col_id:
+        manager_id = st.text_input("FPL manager ID", key="tp_manager_id", value="")
+    with col_btn:
+        st.write("")
+        import_clicked = st.button("Import squad", use_container_width=True)
+
+    if import_clicked:
+        if not manager_id.strip().isdigit():
+            st.error("Please enter a numeric FPL manager ID.")
+        else:
+            try:
+                fpl = LiveFplApiProvider()
+                entry = fpl.get_manager_entry(int(manager_id))
+                pick_gw = int(entry.get("current_event") or current_gw)
+                picked_ids = fpl.get_manager_picks(int(manager_id), pick_gw)
+                label_map = build_player_label_map(proj.players)
+                id_to_label = {v: k for k, v in label_map.items()}
+                missing = [pid for pid in picked_ids if pid not in id_to_label]
+                squad_labels = [id_to_label[pid] for pid in picked_ids if pid in id_to_label]
+                st.session_state["transfer_squad"] = squad_labels
+                bank_raw = entry.get("last_deadline_bank")
+                if bank_raw is not None:
+                    st.session_state["tp_bank"] = round(float(bank_raw) / 10.0, 1)
+                msg = (
+                    f"Imported {len(squad_labels)} players from GW {pick_gw} "
+                    f"for manager `{entry.get('player_first_name', '')} "
+                    f"{entry.get('player_last_name', '')}`."
+                )
+                if missing:
+                    msg += f" {len(missing)} player(s) not available in current projections."
+                st.success(msg)
+                st.rerun()
+            except Exception as exc:  # noqa: BLE001
+                st.error(f"Could not import squad: {exc}")
 
 selected_ids = squad_id_picker(proj.players, key="transfer_squad")
 if len(selected_ids) != 15:
