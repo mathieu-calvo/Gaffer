@@ -19,14 +19,21 @@ def render_pitch(
 
     `players` is indexed by player_id (cols name, team, position, price).
     `projections` is indexed by (player_id, gameweek) with `expected_points`.
+    Players with a blank gameweek (no fixture in `plan.gameweek`) are shown
+    with 0 xPts rather than crashing the render.
     """
+    def _xp(pid: int) -> float:
+        if (pid, plan.gameweek) in projections.index:
+            return float(projections.loc[(pid, plan.gameweek), "expected_points"])
+        return 0.0
+
     xi_payload = [
         {
             "id": int(pid),
             "name": str(players.loc[pid, "name"]),
             "team": str(players.loc[pid, "team"]),
             "position": str(players.loc[pid, "position"]),
-            "expected_points": float(projections.loc[(pid, plan.gameweek), "expected_points"]),
+            "expected_points": _xp(pid),
         }
         for pid in plan.xi_ids
     ]
@@ -44,7 +51,7 @@ def render_pitch(
             "Name": str(players.loc[pid, "name"]),
             "Pos": str(players.loc[pid, "position"]),
             "Team": str(players.loc[pid, "team"]),
-            "xPts": float(projections.loc[(pid, plan.gameweek), "expected_points"]),
+            "xPts": _xp(pid),
         }
         for i, pid in enumerate(plan.bench_ids)
     ]
