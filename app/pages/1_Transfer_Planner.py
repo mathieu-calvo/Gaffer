@@ -32,6 +32,12 @@ def load_projections(horizon: int):
     return proj, fpl.get_current_gw()
 
 
+# Apply any squad/bank prefill from a prior "Import squad" click before widgets
+# are instantiated — Streamlit forbids mutating a widget's session_state key
+# after the widget has been rendered in the current run.
+if "_tp_bank_pending" in st.session_state:
+    st.session_state["tp_bank"] = st.session_state.pop("_tp_bank_pending")
+
 st.title("🔁 Transfer Planner")
 st.markdown(
     "Pick your current 15-man squad and the optimiser recommends transfers, "
@@ -83,7 +89,7 @@ with st.expander("Import squad by FPL manager ID", expanded=False):
                 st.session_state["transfer_squad"] = squad_labels
                 bank_raw = entry.get("last_deadline_bank")
                 if bank_raw is not None:
-                    st.session_state["tp_bank"] = round(float(bank_raw) / 10.0, 1)
+                    st.session_state["_tp_bank_pending"] = round(float(bank_raw) / 10.0, 1)
                 msg = (
                     f"Imported {len(squad_labels)} players from GW {pick_gw} "
                     f"for manager `{entry.get('player_first_name', '')} "
